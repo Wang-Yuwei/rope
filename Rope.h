@@ -16,8 +16,8 @@
 
 namespace WCRope 
 {
-	template< typename CharT >
-	class RopeRep : public TRefCounter<Synchronization::Mutex>
+	template< typename CharT, typename SynchronizationPrimative>
+	class RopeRep : public TRefCounter<SynchronizationPrimative>
 	{
 		public:
 			typedef RefCountedObjPtr<RopeRep> Ptr;
@@ -38,8 +38,8 @@ namespace WCRope
 
 	};
 
-	template< typename CharT >
-	class NullRep : public RopeRep<CharT>
+	template< typename CharT, typename SynchronizationPrimative >
+	class NullRep : public RopeRep<CharT, SynchronizationPrimative>
 	{
 	public:
 		virtual CharT Get(size_t offset)const{
@@ -51,17 +51,17 @@ namespace WCRope
 		virtual size_t TreeDepth()const{
 			return 1;
 		}
-		virtual typename RopeRep<CharT>::StringType GetString() const {
-			return typename RopeRep<CharT>::StringType();
+		virtual typename RopeRep<CharT, SynchronizationPrimative>::StringType GetString() const {
+			return typename RopeRep<CharT, SynchronizationPrimative>::StringType();
 		}
 	};
 
-	template< typename CharSet >
-	class StringRep : public RopeRep< CharSet >
+	template< typename CharSet, typename SynchronizationPrimative >
+	class StringRep : public RopeRep< CharSet, SynchronizationPrimative >
 	{
 		public:
-            typedef typename RopeRep<CharSet>::Ptr Ptr;
-            typedef typename RopeRep<CharSet>::StringType StringType;
+            typedef typename RopeRep<CharSet, SynchronizationPrimative>::Ptr Ptr;
+            typedef typename RopeRep<CharSet, SynchronizationPrimative>::StringType StringType;
                         
 			StringRep( StringType const & str )
 				: mStr(str)
@@ -102,12 +102,12 @@ namespace WCRope
             StringType mStr;
 	};
 
-	template< typename CharSet >
-	class ConCatRep : public RopeRep< CharSet >
+	template< typename CharSet, typename SynchronizationPrimative >
+	class ConCatRep : public RopeRep< CharSet, SynchronizationPrimative >
 	{
 		public:
-			typedef typename RopeRep<CharSet>::Ptr Ptr;
-			typedef typename RopeRep<CharSet>::StringType StringType;			
+			typedef typename RopeRep<CharSet, SynchronizationPrimative>::Ptr Ptr;
+			typedef typename RopeRep<CharSet, SynchronizationPrimative>::StringType StringType;			
                         
 			ConCatRep(  Ptr const & lhs, Ptr const & rhs )
 				: mLength(lhs->Length() + rhs->Length())
@@ -207,12 +207,12 @@ namespace WCRope
 			Ptr mLhs, mRhs;
 	};
 
-	template< typename CharSet >
-	class RepeatedSequenceRep : public RopeRep< CharSet >
+	template< typename CharSet, typename SynchronizationPrimative >
+	class RepeatedSequenceRep : public RopeRep< CharSet, SynchronizationPrimative >
 	{
 		public:
-			typedef typename RopeRep<CharSet>::Ptr Ptr;
-			typedef typename RopeRep<CharSet>::StringType StringType;
+			typedef typename RopeRep<CharSet, SynchronizationPrimative>::Ptr Ptr;
+			typedef typename RopeRep<CharSet, SynchronizationPrimative>::StringType StringType;
                         
 			RepeatedSequenceRep(  size_t count, Ptr const & sequence )
 				: mLength(count * sequence->Length())
@@ -246,12 +246,12 @@ namespace WCRope
 			const Ptr mSequence;
 	};
 
-	template< typename CharSet >
-	class SubStrRep : public RopeRep< CharSet >
+	template< typename CharSet, typename SynchronizationPrimative >
+	class SubStrRep : public RopeRep< CharSet, SynchronizationPrimative >
 	{
 		public:
-			typedef typename RopeRep<CharSet>::Ptr Ptr;
-			typedef typename RopeRep<CharSet>::StringType StringType;
+			typedef typename RopeRep<CharSet, SynchronizationPrimative>::Ptr Ptr;
+			typedef typename RopeRep<CharSet, SynchronizationPrimative>::StringType StringType;
                         
 			// half open range [start, end)
 			SubStrRep(  size_t start, size_t end, Ptr const & str )
@@ -290,12 +290,12 @@ namespace WCRope
 			const Ptr mSequence;
 	};
 
-	template< typename CharT >
+	template< typename CharT, typename SynchronizationPrimative	>
 	class Rope
 	{
 		public:
-			typedef typename RopeRep<CharT>::StringType StringType;
-			typedef typename RopeRep<CharT>::Ptr Ptr;
+			typedef typename RopeRep<CharT, SynchronizationPrimative>::StringType StringType;
+			typedef typename RopeRep<CharT, SynchronizationPrimative>::Ptr Ptr;
             typedef CharT value_type;
 			typedef const CharT* pointer;
 			typedef const CharT& const_reference;
@@ -308,7 +308,7 @@ namespace WCRope
 
 			// constructs a null/empty string
 			Rope( )
-				: mRopeRep( new NullRep<CharT>() )
+				: mRopeRep( new NullRep<CharT, SynchronizationPrimative>() )
 			{
 				// nothing to do here
 			}
@@ -318,11 +318,11 @@ namespace WCRope
 			{				
 				if (str.size()>0)
 				{
-					mRopeRep = new StringRep<CharT>(str);
+					mRopeRep = new StringRep<CharT, SynchronizationPrimative>(str);
 				}
 				else
 				{
-					mRopeRep = new NullRep<CharT>();
+					mRopeRep = new NullRep<CharT, SynchronizationPrimative>();
 				}
 			}
 
@@ -336,7 +336,7 @@ namespace WCRope
 
 			// constructs a string of "count" repetitions of rhs
 			Rope( size_t count, const Rope& rhs )
-				: mRopeRep( new RepeatedSequenceRep<CharT>(count, rhs.mRopeRep) )
+				: mRopeRep( new RepeatedSequenceRep<CharT, SynchronizationPrimative>(count, rhs.mRopeRep) )
 			{
 				// nothing to do here
 			}
@@ -353,7 +353,7 @@ namespace WCRope
 			// can be found after the iterator class
 			template< typename Itr >
 			Rope( Itr ibegin, Itr iend )
-				: mRopeRep( new StringRep<CharT>(ibegin, iend) )
+				: mRopeRep( new StringRep<CharT, SynchronizationPrimative>(ibegin, iend) )
 			{
 
 			}
@@ -367,11 +367,15 @@ namespace WCRope
 					{
 						if (size()+rhs.size()<CHUNK_SIZE)
 						{
-							mRopeRep = new StringRep<CharT>(mRopeRep->GetString(), rhs.mRopeRep->GetString());
+							mRopeRep = new StringRep<CharT, SynchronizationPrimative>(
+								mRopeRep->GetString(), rhs.mRopeRep->GetString()
+							);
 						}
 						else
 						{
-							mRopeRep = new ConCatRep<CharT>(mRopeRep, rhs.mRopeRep);
+							mRopeRep = new ConCatRep<CharT, SynchronizationPrimative>(
+								mRopeRep, rhs.mRopeRep
+							);
 						}
 					}
 					else
@@ -403,7 +407,8 @@ namespace WCRope
 			}
 
 			void clear(){
-				mRopeRep = new NullRep<CharT>();
+				// TODO: don't allocate a null rep, have a static instance!
+				mRopeRep = new NullRep<CharT, SynchronizationPrimative>();
 			}
 
 			void swap(Rope& rhs) {
@@ -426,7 +431,9 @@ namespace WCRope
 			Rope substr(size_t start, size_t size) const
 			{
 				Rope result;
-				result.mRopeRep = new SubStrRep<CharT>(start, start+size, this->mRopeRep);
+				result.mRopeRep = new SubStrRep<CharT, SynchronizationPrimative>(
+					start, start+size, this->mRopeRep
+				);
 				return result;
 			}
 
@@ -635,11 +642,15 @@ namespace WCRope
 			{
                 if (ibegin.distance(iend)>CHUNK_SIZE)
                 {
-                    mRopeRep = new SubStrRep<CharT>(ibegin.GetIndex(), iend.GetIndex(), ibegin.GetRootPtr());
+                    mRopeRep = new SubStrRep<CharT, SynchronizationPrimative>(
+                    	ibegin.GetIndex(), iend.GetIndex(), ibegin.GetRootPtr()
+                    );
                 }
                 else 
                 {
-                    mRopeRep = new StringRep<CharT>(ibegin, iend);
+                    mRopeRep = new StringRep<CharT, SynchronizationPrimative>(
+                    	ibegin, iend
+                    );
                 }
 
 			}
@@ -656,10 +667,10 @@ namespace WCRope
 			//returns -1 if this < rhs, 1 if this > rhs, and 0 if this == rhs
 			int LexicographicalCompare3Way(const Rope& rhs)const
 			{
-				std::vector< RopeRep<CharT>* > lhsStack, rhsStack;
+				std::vector< RopeRep<CharT, SynchronizationPrimative>* > lhsStack, rhsStack;
 				size_t lhsCharPos(0),rhsCharPos(0);
-				RopeRep<CharT>* lhsPosPtr(mRopeRep.GetPtr());
-				RopeRep<CharT>* rhsPosPtr(rhs.mRopeRep.GetPtr());
+				RopeRep<CharT, SynchronizationPrimative>* lhsPosPtr(mRopeRep.GetPtr());
+				RopeRep<CharT, SynchronizationPrimative>* rhsPosPtr(rhs.mRopeRep.GetPtr());
 
 				lhsStack.reserve( lhsPosPtr->TreeDepth()-1 );
 				rhsStack.reserve( rhsPosPtr->TreeDepth()-1 );
@@ -899,59 +910,70 @@ namespace WCRope
 			Ptr mRopeRep;
 	};
 
-	template< typename CharT >
-	Rope<CharT> operator+(const Rope<CharT>& lhs, const Rope<CharT>& rhs)
+	template< typename CharT, typename SynchronizationPrimative >
+	Rope<CharT, SynchronizationPrimative> operator+(
+		const Rope<CharT, SynchronizationPrimative>& lhs, 
+		const Rope<CharT, SynchronizationPrimative>& rhs)
 	{
-		Rope<CharT> result(lhs);
+		Rope<CharT, SynchronizationPrimative> result(lhs);
 		result += rhs;
 		return result;
 	}
 
-	template< typename CharT >
-	Rope<CharT> operator+(const Rope<CharT>& lhs, const CharT* rhs)
+	template< typename CharT, typename SynchronizationPrimative >
+	Rope<CharT, SynchronizationPrimative> operator+(
+		const Rope<CharT, SynchronizationPrimative>& lhs, 
+		const CharT* rhs)
 	{
-		Rope<CharT> result(lhs);
-		result += Rope<CharT>(rhs);
+		Rope<CharT, SynchronizationPrimative> result(lhs);
+		result += Rope<CharT, SynchronizationPrimative>(rhs);
 		return result;
 	}
 
-	template< typename CharT >
-	bool operator==(const typename Rope<CharT>::StringType& lhs, const Rope<CharT>& rhs)
+	template< typename CharT, typename SynchronizationPrimative >
+	bool operator==(
+		const typename Rope<CharT, SynchronizationPrimative>::StringType& lhs, 
+		const Rope<CharT, SynchronizationPrimative>& rhs)
 	{
 		return rhs==lhs;
 	}
 
-	template< typename CharT >
-	bool operator==(const CharT* lhs, const Rope<CharT>& rhs)
+	template< typename CharT, typename SynchronizationPrimative >
+	bool operator==(
+		const CharT* lhs, 
+		const Rope<CharT, SynchronizationPrimative>& rhs)
 	{
 		return rhs==lhs;
 	}
 
-	template<typename char_t>
-	std::ostream& operator<<(std::ostream& os, const WCRope::Rope<char_t>& rhs)
+	template<typename char_t, typename SynchronizationPrimative>
+	std::ostream& operator<<(
+		std::ostream& os, 
+		const WCRope::Rope<char_t, SynchronizationPrimative>& rhs)
 	{
-		for (typename WCRope::Rope<char_t>::const_iterator i = rhs.begin(); i!=rhs.end(); ++i)
+		typedef typename WCRope::Rope<char_t, SynchronizationPrimative>::const_iterator itr;
+		for (itr i = rhs.begin(); i!=rhs.end(); ++i)
 		{
 			os << *i;
 		}
 		return os;
 	}
 
-	template< typename CharT >
-	class ReversableRope : public Rope<CharT>
+	template< typename CharT, typename SynchronizationPrimative >
+	class ReversableRope : public Rope<CharT, SynchronizationPrimative>
 	{
 		public:
-
+			typedef Rope<CharT, SynchronizationPrimative> Base;
 			// constructs a null/empty string
 			ReversableRope( )
-				: Rope<CharT>( )
+				: Base( )
 			{
 				// nothing to do here
 			}
 
 			// constructs a copy of a string 
-			ReversableRope( const typename Rope<CharT>::StringType& str )
-				: Rope<CharT>(str)
+			ReversableRope( const typename Rope<CharT, SynchronizationPrimative>::StringType& str )
+				: Base(str)
 			{				
 
 			}
@@ -959,34 +981,34 @@ namespace WCRope
 			// constructs a copy of null terminated c-string str
 			// todo - needs optimising (redundant copies)
 			ReversableRope( const CharT* str )
-				: Rope<CharT>(str)
+				: Base(str)
 			{
 				// nothing to do here
 			}
 
 			// constructs a string of "count" repetitions of rhs
-			ReversableRope( size_t count, Rope<CharT>& rhs )
-				: Rope<CharT>( count, rhs )
+			ReversableRope( size_t count, Rope<CharT, SynchronizationPrimative>& rhs )
+				: Base( count, rhs )
 			{
 				// nothing to do here
 			}
 
 			// constructs a string of "count" repetitions of char "c"
 			ReversableRope( size_t count, CharT c )
-				: Rope<CharT>( count, c )
+				: Base( count, c )
 			{
 				// nothing to do here			
 			}
 
 			template< typename Itr >
 			ReversableRope( Itr ibegin, Itr iend )
-				: Rope<CharT>( ibegin, iend )
+				: Base( ibegin, iend )
 			{
 				// nothing to do here
 			}
 
-			ReversableRope(const Rope<CharT>& rhs)
-				: Rope<CharT>(rhs)
+			ReversableRope(const Rope<CharT, SynchronizationPrimative>& rhs)
+				: Base(rhs)
 			{
 				// nothing to do here
 			}
@@ -999,7 +1021,9 @@ namespace WCRope
 			{				
 				if (mRevRep.GetPtr()==0)
 				{
-					mRevRep = new SubStrRep<CharT>(this->size(), 0, this->mRopeRep);
+					mRevRep = new SubStrRep<CharT, SynchronizationPrimative>(
+						this->size(), 0, this->mRopeRep
+					);
 				}
 				ReversableRope result;
 				result.mRopeRep = mRevRep;
@@ -1008,8 +1032,8 @@ namespace WCRope
 			}
 
 			// reverse iteration is a bit of a hack...
-			typedef typename Rope<CharT>::const_iterator const_reverse_iterator;
-			typedef typename Rope<CharT>::const_iterator reverse_iterator;
+			typedef typename Rope<CharT, SynchronizationPrimative>::const_iterator const_reverse_iterator;
+			typedef typename Rope<CharT, SynchronizationPrimative>::const_iterator reverse_iterator;
 
 			const_reverse_iterator rbegin() const {
 				// creates a new rope that is the reverse of this one, then returns the begin() of that
@@ -1022,7 +1046,7 @@ namespace WCRope
 			}
 
 		private:
-			mutable typename Rope<CharT>::Ptr mRevRep;
+			mutable typename Rope<CharT, SynchronizationPrimative>::Ptr mRevRep;
 	};
 }
 

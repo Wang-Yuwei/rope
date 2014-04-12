@@ -2,8 +2,8 @@
 
 int main()
 {
- 	WCRope::Rope<char> test = "This is a string";
-	WCRope::ReversableRope<char> r = test;
+ 	WCRope::Rope<char, Synchronization::NullMutex> test = "This is a string";
+	WCRope::ReversableRope<char, Synchronization::NullMutex> r = test;
 	
 	test = test + " " + r.reverse();
 	
