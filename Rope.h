@@ -42,6 +42,9 @@ namespace WCRope
 	class NullRep : public RopeRep<CharT, SynchronizationPrimative>
 	{
 	public:
+		typedef typename RopeRep<CharT, SynchronizationPrimative>::Ptr Ptr;
+		typedef typename RopeRep<CharT, SynchronizationPrimative>::StringType StringType;
+
 		virtual CharT Get(size_t offset)const{
 			assert(false); return 0;
 		}
@@ -54,7 +57,20 @@ namespace WCRope
 		virtual typename RopeRep<CharT, SynchronizationPrimative>::StringType GetString() const {
 			return typename RopeRep<CharT, SynchronizationPrimative>::StringType();
 		}
+		
+		// saves having to create one on the heap every time
+		static Ptr Instance();
 	};
+	
+	// feels so wrong
+	template< typename CharT, typename SynchronizationPrimative >
+	typename NullRep<CharT, SynchronizationPrimative>::Ptr NullRep<CharT, SynchronizationPrimative>::Instance()
+	{
+		static typename RopeRep<CharT, SynchronizationPrimative>::Ptr r( 
+			new NullRep<CharT, SynchronizationPrimative>()
+		);
+		return r;
+	}
 
 	template< typename CharSet, typename SynchronizationPrimative >
 	class StringRep : public RopeRep< CharSet, SynchronizationPrimative >
@@ -296,6 +312,7 @@ namespace WCRope
 		public:
 			typedef typename RopeRep<CharT, SynchronizationPrimative>::StringType StringType;
 			typedef typename RopeRep<CharT, SynchronizationPrimative>::Ptr Ptr;
+			typedef NullRep<CharT, SynchronizationPrimative> NullRep;
             typedef CharT value_type;
 			typedef const CharT* pointer;
 			typedef const CharT& const_reference;
@@ -308,7 +325,7 @@ namespace WCRope
 
 			// constructs a null/empty string
 			Rope( )
-				: mRopeRep( new NullRep<CharT, SynchronizationPrimative>() )
+				: mRopeRep( NullRep::Instance() )
 			{
 				// nothing to do here
 			}
@@ -322,7 +339,7 @@ namespace WCRope
 				}
 				else
 				{
-					mRopeRep = new NullRep<CharT, SynchronizationPrimative>();
+					mRopeRep = NullRep::Instance();
 				}
 			}
 
@@ -407,8 +424,7 @@ namespace WCRope
 			}
 
 			void clear(){
-				// TODO: don't allocate a null rep, have a static instance!
-				mRopeRep = new NullRep<CharT, SynchronizationPrimative>();
+				mRopeRep = NullRep::Instance();
 			}
 
 			void swap(Rope& rhs) {
